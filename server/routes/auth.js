@@ -1,6 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -12,6 +13,13 @@ router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+    console.log('Registration attempt:', { name, email });
+
+    // Validate input
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -21,6 +29,8 @@ router.post('/register', async (req, res) => {
     // Create new user
     const user = new User({ name, email, password });
     await user.save();
+
+    console.log('User created successfully:', user._id);
 
     // Generate JWT token
     const token = jwt.sign(
@@ -40,12 +50,15 @@ router.post('/register', async (req, res) => {
       createdAt: user.createdAt
     };
 
+    console.log('Registration successful, sending response');
+
     res.status(201).json({
       message: 'User registered successfully',
       token,
       user: userData
     });
   } catch (error) {
+    console.error('Registration error:', error);
     res.status(400).json({ error: error.message });
   }
 });
@@ -55,15 +68,24 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    console.log('Login attempt:', { email });
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
     // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
+      console.log('User not found:', email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
+      console.log('Invalid password for user:', email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
@@ -88,12 +110,15 @@ router.post('/login', async (req, res) => {
       lastLogin: user.lastLogin
     };
 
+    console.log('Login successful for user:', user._id);
+
     res.json({
       message: 'Login successful',
       token,
       user: userData
     });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -101,13 +126,16 @@ router.post('/login', async (req, res) => {
 // Get current user
 router.get('/me', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select('-password');
+    console.log('Getting current user:', req.user._id);
+    
+    const user = await User.findById(req.user._id).select('-password');
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     res.json(user);
   } catch (error) {
+    console.error('Get current user error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -117,8 +145,10 @@ router.put('/profile', authenticateToken, async (req, res) => {
   try {
     const { name, avatar, preferences } = req.body;
     
+    console.log('Updating profile for user:', req.user._id);
+    
     const user = await User.findByIdAndUpdate(
-      req.user.userId,
+      req.user._id,
       { 
         name, 
         avatar, 
@@ -133,6 +163,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
       user
     });
   } catch (error) {
+    console.error('Profile update error:', error);
     res.status(400).json({ error: error.message });
   }
 });
@@ -141,23 +172,5 @@ router.put('/profile', authenticateToken, async (req, res) => {
 router.post('/logout', (req, res) => {
   res.json({ message: 'Logout successful' });
 });
-
-// Middleware to authenticate JWT token
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
-  }
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
-    }
-    req.user = user;
-    next();
-  });
-}
 
 export default router;

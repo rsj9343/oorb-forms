@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Folder, FileText, Plus } from 'lucide-react';
 import { folderAPI } from '../../services/api';
+import toast from 'react-hot-toast';
 
 interface FolderOption {
   _id: string;
@@ -35,16 +36,23 @@ const FormCreationModal: React.FC<FormCreationModalProps> = ({
 
   const loadFolders = async () => {
     try {
+      console.log('Loading folders...');
       const response = await folderAPI.getFolders();
+      console.log('Folders loaded:', response.data);
       setFolders(response.data);
     } catch (error) {
       console.error('Error loading folders:', error);
+      // Don't show error toast for folders, it's optional
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    
+    if (!title.trim()) {
+      toast.error('Please enter a form title');
+      return;
+    }
 
     setLoading(true);
     
@@ -52,6 +60,7 @@ const FormCreationModal: React.FC<FormCreationModalProps> = ({
       let folderId: string | undefined;
 
       if (selectedOption === 'new-folder' && newFolderName.trim()) {
+        console.log('Creating new folder:', newFolderName);
         // Create new folder first
         const folderResponse = await folderAPI.createFolder({
           name: newFolderName.trim(),
@@ -59,9 +68,13 @@ const FormCreationModal: React.FC<FormCreationModalProps> = ({
           color: '#3B82F6'
         });
         folderId = folderResponse.data._id;
+        console.log('New folder created:', folderId);
       } else if (selectedOption === 'folder' && selectedFolderId) {
         folderId = selectedFolderId;
+        console.log('Using existing folder:', folderId);
       }
+
+      console.log('Submitting form creation:', { title, description, folderId });
 
       onSubmit({
         title: title.trim(),
@@ -75,9 +88,9 @@ const FormCreationModal: React.FC<FormCreationModalProps> = ({
       setSelectedOption('standalone');
       setSelectedFolderId('');
       setNewFolderName('');
-      onClose();
-    } catch (error) {
-      console.error('Error creating form:', error);
+    } catch (error: any) {
+      console.error('Error in form creation:', error);
+      toast.error(error.response?.data?.error || 'Failed to create form');
     } finally {
       setLoading(false);
     }
@@ -110,6 +123,7 @@ const FormCreationModal: React.FC<FormCreationModalProps> = ({
               placeholder="Enter form title"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
+              autoFocus
             />
           </div>
           
@@ -216,15 +230,23 @@ const FormCreationModal: React.FC<FormCreationModalProps> = ({
               type="button"
               onClick={onClose}
               className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              disabled={loading || !title.trim()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating...' : 'Create Form'}
+              {loading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating...
+                </div>
+              ) : (
+                'Create Form'
+              )}
             </button>
           </div>
         </form>
