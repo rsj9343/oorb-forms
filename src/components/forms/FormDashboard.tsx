@@ -337,6 +337,7 @@ const FormDashboard: React.FC<FormDashboardProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                console.log('FormDashboard: Viewing responses for form:', item._id);
                 onViewResponses(item._id);
                 setActiveDropdown(null);
               }}
