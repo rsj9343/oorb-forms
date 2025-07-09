@@ -33,7 +33,7 @@ export const authenticateToken = async (req, res, next) => {
     try {
       decoded = jwt.verify(token, JWT_SECRET);
       console.log('Auth middleware - Token decoded successfully:', {
-        userId: decoded.userId,
+        userId: decoded.userId || decoded._id,
         email: decoded.email,
         exp: new Date(decoded.exp * 1000).toISOString()
       });
@@ -43,9 +43,10 @@ export const authenticateToken = async (req, res, next) => {
     }
     
     // Find the user
-    const user = await User.findById(decoded.userId);
+    const userId = decoded.userId || decoded._id;
+    const user = await User.findById(userId);
     if (!user) {
-      console.log('Auth middleware - User not found for ID:', decoded.userId);
+      console.log('Auth middleware - User not found for ID:', userId);
       return res.status(401).json({ error: 'User not found' });
     }
 
@@ -80,7 +81,8 @@ export const optionalAuth = async (req, res, next) => {
       if (token) {
         try {
           const decoded = jwt.verify(token, JWT_SECRET);
-          const user = await User.findById(decoded.userId);
+          const userId = decoded.userId || decoded._id;
+          const user = await User.findById(userId);
           if (user) {
             req.user = user;
           }

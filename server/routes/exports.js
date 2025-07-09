@@ -1,41 +1,23 @@
 import express from 'express';
-import jwt from 'jsonwebtoken';
 import XLSX from 'xlsx';
 import Response from '../models/Response.js';
 import Form from '../models/Form.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
-
-// Middleware to authenticate JWT token
-async function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
-  }
-
-  const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-
-  try {
-    const user = jwt.verify(token, JWT_SECRET);
-    req.user = user;
-    next();
-  } catch (err) {
-    return res.status(403).json({ error: 'Invalid or expired token' });
-  }
-}
 
 // Export responses as Excel (only if user owns the form)
 router.get('/excel/:formId', authenticateToken, async (req, res) => {
   try {
+    console.log('Export route - Excel export for form:', req.params.formId, 'by user:', req.user._id);
+    
     const form = await Form.findOne({ 
       _id: req.params.formId, 
-      createdBy: req.user.userId 
+      createdBy: req.user._id 
     });
     
     if (!form) {
-      return res.status(404).json({ error: 'Form not found or access denied' });
+      return res.status(403).json({ error: 'Form not found or access denied' });
     }
 
     const responses = await Response.find({ formId: req.params.formId })
@@ -91,13 +73,15 @@ router.get('/excel/:formId', authenticateToken, async (req, res) => {
 // Export responses as CSV (only if user owns the form)
 router.get('/csv/:formId', authenticateToken, async (req, res) => {
   try {
+    console.log('Export route - CSV export for form:', req.params.formId, 'by user:', req.user._id);
+    
     const form = await Form.findOne({ 
       _id: req.params.formId, 
-      createdBy: req.user.userId 
+      createdBy: req.user._id 
     });
     
     if (!form) {
-      return res.status(404).json({ error: 'Form not found or access denied' });
+      return res.status(403).json({ error: 'Form not found or access denied' });
     }
 
     const responses = await Response.find({ formId: req.params.formId })
@@ -153,13 +137,15 @@ router.get('/csv/:formId', authenticateToken, async (req, res) => {
 // Get export summary (only if user owns the form)
 router.get('/summary/:formId', authenticateToken, async (req, res) => {
   try {
+    console.log('Export route - Summary for form:', req.params.formId, 'by user:', req.user._id);
+    
     const form = await Form.findOne({ 
       _id: req.params.formId, 
-      createdBy: req.user.userId 
+      createdBy: req.user._id 
     });
     
     if (!form) {
-      return res.status(404).json({ error: 'Form not found or access denied' });
+      return res.status(403).json({ error: 'Form not found or access denied' });
     }
 
     const totalResponses = await Response.countDocuments({ formId: req.params.formId });
