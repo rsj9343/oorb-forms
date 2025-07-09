@@ -50,13 +50,38 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ formId, onBack }) => {
   };
 
   const loadResponses = async () => {
+    setLoading(true);
     try {
       const response = await responseAPI.getResponses(formId, currentPage, 10);
-      setResponses(response.data.responses);
-      setTotalPages(response.data.pagination.total);
+      console.log('ResponseViewer: API response:', response.data);
+      
+      // Handle different response structures
+      if (response.data.responses) {
+        setResponses(response.data.responses);
+        setTotalPages(response.data.pagination?.total || 1);
+      } else if (Array.isArray(response.data)) {
+        // If the API returns responses directly as an array
+        setResponses(response.data);
+        setTotalPages(1);
+      } else {
+        console.warn('Unexpected response structure:', response.data);
+        setResponses([]);
+        setTotalPages(1);
+      }
     } catch (error) {
-      toast.error('Failed to load responses');
-      console.error('Error loading responses:', error);
+      console.error('ResponseViewer: Error loading responses:', error);
+      
+      // More specific error handling
+      if (error.response?.status === 404) {
+        toast.error('Form not found or no responses available');
+      } else if (error.response?.status === 403) {
+        toast.error('You do not have permission to view these responses');
+      } else {
+        toast.error('Failed to load responses. Please try again.');
+      }
+      
+      setResponses([]);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }

@@ -183,8 +183,10 @@ export const responseAPI = {
   },
   
   getResponses: (formId: string, page = 1, limit = 10) => {
-    console.log('Response API: Getting responses for form:', formId, 'page:', page);
-    return api.get(`/responses/form/${formId}?page=${page}&limit=${limit}`);
+    console.log('Response API: Getting responses for form:', formId, 'page:', page, 'limit:', limit);
+    const url = `/responses/form/${formId}?page=${page}&limit=${limit}`;
+    console.log('Response API: Full URL:', `${API_BASE_URL}${url}`);
+    return api.get(url);
   },
   
   getResponse: (id: string) => {

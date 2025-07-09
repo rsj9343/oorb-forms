@@ -98,6 +98,8 @@ router.post('/', async (req, res) => {
 // Get responses for a form (only if user owns the form)
 router.get('/form/:formId', authenticateToken, async (req, res) => {
   try {
+    console.log('Responses route - Getting responses for form:', req.params.formId, 'by user:', req.user.userId);
+    
     // Verify user owns the form
     const form = await Form.findOne({ 
       _id: req.params.formId, 
@@ -105,10 +107,13 @@ router.get('/form/:formId', authenticateToken, async (req, res) => {
     });
     
     if (!form) {
+      console.log('Responses route - Form not found or access denied for form:', req.params.formId);
       return res.status(404).json({ error: 'Form not found or access denied' });
     }
 
     const { page = 1, limit = 10 } = req.query;
+    console.log('Responses route - Pagination params:', { page, limit });
+    
     const skip = (page - 1) * limit;
 
     const responses = await Response.find({ formId: req.params.formId })
@@ -117,6 +122,8 @@ router.get('/form/:formId', authenticateToken, async (req, res) => {
       .limit(parseInt(limit));
 
     const total = await Response.countDocuments({ formId: req.params.formId });
+    
+    console.log('Responses route - Found', responses.length, 'responses out of', total, 'total');
 
     res.json({
       responses,
@@ -127,6 +134,7 @@ router.get('/form/:formId', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Responses route - Error getting responses:', error);
     res.status(500).json({ error: error.message });
   }
 });
