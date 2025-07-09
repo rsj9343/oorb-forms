@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, MoreVertical, Eye, Edit, Trash2, Copy, Share2, BarChart3, Users, Calendar, FileText, Download, Send, Folder, FolderOpen, FolderPlus, Settings, Menu, Bot, Image as ImageIcon, Star, User, LogOut, TrendingUp, Activity, ChevronDown, ChevronRight, X, ArrowLeft, Grid as Grid3X3, List, SortAsc } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, Eye, Edit, Trash2, Copy, Share2, BarChart3, Users, Calendar, FileText, Download, Send, Folder, FolderOpen, FolderPlus, Settings, Menu, Bot, Image as ImageIcon, Star, User, LogOut, TrendingUp, Activity, ChevronDown, ChevronRight, X, ArrowLeft, Grid as Grid3X3, List, SortAsc, ExternalLink } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { formAPI, exportAPI, folderAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -52,6 +52,7 @@ const FormDashboard: React.FC<FormDashboardProps> = ({
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -256,6 +257,11 @@ const FormDashboard: React.FC<FormDashboardProps> = ({
     }
   };
 
+  const toggleDropdown = (itemId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setActiveDropdown(activeDropdown === itemId ? null : itemId);
+  };
+
   const handleLogout = () => {
     logout();
   };
@@ -267,6 +273,120 @@ const FormDashboard: React.FC<FormDashboardProps> = ({
       case 'closed': return 'bg-red-500';
       default: return 'bg-gray-500';
     }
+  };
+
+  const renderContextMenu = (item: FormItem | FolderItem, type: 'form' | 'folder') => {
+    const isFolder = type === 'folder';
+    const isActive = activeDropdown === item._id;
+    
+    if (!isActive) return null;
+
+    return (
+      <div className="absolute right-0 top-8 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+        {isFolder ? (
+          <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenFolderModal(item as FolderItem);
+                setActiveDropdown(null);
+              }}
+              className="w-full flex items-center space-x-3 px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <FolderOpen className="w-4 h-4" />
+              <span>Open Folder</span>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedFolder(item as FolderItem);
+                setShowFolderModal(true);
+                setActiveDropdown(null);
+              }}
+              className="w-full flex items-center space-x-3 px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <Edit className="w-4 h-4" />
+              <span>Edit Folder</span>
+            </button>
+            <div className="border-t border-gray-100 my-1"></div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteFolder(item._id);
+                setActiveDropdown(null);
+              }}
+              className="w-full flex items-center space-x-3 px-4 py-2 text-left text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Delete Folder</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditForm(item._id);
+                setActiveDropdown(null);
+              }}
+              className="w-full flex items-center space-x-3 px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <Edit className="w-4 h-4" />
+              <span>Edit Form</span>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewResponses(item._id);
+                setActiveDropdown(null);
+              }}
+              className="w-full flex items-center space-x-3 px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span>View Responses</span>
+            </button>
+            {(item as FormItem).status === 'published' && (item as FormItem).shareUrl && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copyShareLink((item as FormItem).shareUrl!);
+                    setActiveDropdown(null);
+                  }}
+                  className="w-full flex items-center space-x-3 px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <Copy className="w-4 h-4" />
+                  <span>Copy Share Link</span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(`/form/${(item as FormItem).shareUrl}`, '_blank');
+                    setActiveDropdown(null);
+                  }}
+                  className="w-full flex items-center space-x-3 px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Open Form</span>
+                </button>
+              </>
+            )}
+            <div className="border-t border-gray-100 my-1"></div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteForm(item._id);
+                setActiveDropdown(null);
+              }}
+              className="w-full flex items-center space-x-3 px-4 py-2 text-left text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Delete Form</span>
+            </button>
+          </>
+        )}
+      </div>
+    );
   };
 
   const standaloneForms = forms.filter(form => !form.folderId);
@@ -671,28 +791,55 @@ const FormDashboard: React.FC<FormDashboardProps> = ({
                 ) : (
                   <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                     <div className="hidden sm:grid sm:grid-cols-4 gap-4 p-4 border-b border-gray-200 bg-gray-50 text-sm font-medium text-gray-700">
-                      <div>Name</div>
+                      <div className="flex items-center justify-between">
+                        <span>Name</span>
+                      </div>
                       <div>Type</div>
                       <div>Status</div>
-                      <div>Modified</div>
+                      <div className="flex items-center justify-between">
+                        <span>Modified</span>
+                        <span>Actions</span>
+                      </div>
                     </div>
                     <div className="divide-y divide-gray-200">
                       {/* Folders in list view */}
                       {filteredFolders.map((folder, index) => (
-                        <div key={folder._id} className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4 p-4 hover:bg-gray-50 cursor-pointer">
+                        <div 
+                          key={folder._id} 
+                          className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4 p-4 hover:bg-gray-50 cursor-pointer relative"
+                          onClick={() => handleItemClick(folder._id, 'folder')}
+                        >
                           <div className="flex items-center space-x-3">
                             <Folder className="w-5 h-5" style={{ color: folder.color }} />
-                            <span className="text-sm font-medium">{folder.name}</span>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-medium truncate block">{folder.name}</span>
+                              <span className="text-xs text-gray-500 sm:hidden">Folder • {folder.formCount} items</span>
+                            </div>
                           </div>
                           <div className="text-sm text-gray-600 sm:block hidden">Folder</div>
                           <div className="text-sm text-gray-600 sm:block hidden">-</div>
-                          <div className="text-sm text-gray-600">{new Date(folder.createdAt).toLocaleDateString()}</div>
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm text-gray-600">{new Date(folder.createdAt).toLocaleDateString()}</div>
+                            <div className="relative">
+                              <button
+                                onClick={(e) => toggleDropdown(folder._id, e)}
+                                className="p-1 rounded-md hover:bg-gray-200 transition-colors"
+                              >
+                                <MoreVertical className="w-4 h-4 text-gray-500" />
+                              </button>
+                              {renderContextMenu(folder, 'folder')}
+                            </div>
+                          </div>
                         </div>
                       ))}
                       
                       {/* Forms in list view */}
                       {filteredStandaloneForms.map((form, index) => (
-                        <div key={form._id} className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4 p-4 hover:bg-gray-50 cursor-pointer">
+                        <div 
+                          key={form._id} 
+                          className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4 p-4 hover:bg-gray-50 cursor-pointer relative"
+                          onClick={() => handleItemClick(form._id, 'form')}
+                        >
                           <div className="flex items-center space-x-3">
                             <div className="relative">
                               <FileText className="w-5 h-5 text-blue-600" />
@@ -701,7 +848,10 @@ const FormDashboard: React.FC<FormDashboardProps> = ({
                                 title={`Status: ${form.status}`}
                               />
                             </div>
-                            <span className="text-sm font-medium">{form.title}</span>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-medium truncate block">{form.title}</span>
+                              <span className="text-xs text-gray-500 sm:hidden">Form • {form.responses || 0} responses</span>
+                            </div>
                           </div>
                           <div className="text-sm text-gray-600 sm:block hidden">Form</div>
                           <div className="flex items-center">
@@ -711,7 +861,18 @@ const FormDashboard: React.FC<FormDashboardProps> = ({
                             />
                             <span className="text-sm text-gray-600 capitalize">{form.status}</span>
                           </div>
-                          <div className="text-sm text-gray-600">{new Date(form.createdAt).toLocaleDateString()}</div>
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm text-gray-600">{new Date(form.createdAt).toLocaleDateString()}</div>
+                            <div className="relative">
+                              <button
+                                onClick={(e) => toggleDropdown(form._id, e)}
+                                className="p-1 rounded-md hover:bg-gray-200 transition-colors"
+                              >
+                                <MoreVertical className="w-4 h-4 text-gray-500" />
+                              </button>
+                              {renderContextMenu(form, 'form')}
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -748,6 +909,14 @@ const FormDashboard: React.FC<FormDashboardProps> = ({
             )}
           </Droppable>
         </div>
+
+        {/* Click outside to close dropdown */}
+        {activeDropdown && (
+          <div 
+            className="fixed inset-0 z-30" 
+            onClick={() => setActiveDropdown(null)}
+          />
+        )}
 
         {/* Click outside to close dropdown */}
         {showProfileDropdown && (
